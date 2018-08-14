@@ -11,14 +11,24 @@ import (
 
 func main() {
 	wd, err := filepath.Abs(filepath.Dir(os.Args[1]))
-	log.Debug("Working directory: %s", wd)
+	log.Info("Working directory: %s", wd)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	}
-	s := modules.NewServer(wd, 3334)
+	if err != nil {
+		log.Error("%v", err)
+	}
+	dd, err := filepath.Abs(filepath.Dir(os.Args[2]))
+	if err != nil {
+		log.Error("%v", err)
+		return
+	}
+	log.Info("Data directory: %s", dd)
+	s := modules.NewServer(wd, dd, 3334)
 	err = s.Init()
 	if err != nil {
 		log.Error("%v", err)
+		return
 	}
 	s.Run()
 }
