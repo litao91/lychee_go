@@ -85,12 +85,11 @@ func (server *LycheeServer) Init() (err error) {
 	server.db.InitDb()
 	server.InitSessions()
 	server.router.Use(static.Serve("/upload", static.LocalFile(server.dataPath, false)))
+	server.router.Use(static.Serve("/dist", static.LocalFile(path.Join(server.basePath, "dist"), false)))
+	server.router.Use(static.Serve("/src", static.LocalFile(path.Join(server.basePath, "src"), false)))
 
 	// serve the index file for root
 	server.router.GET("/", server.ServeFile("index.html"))
-	server.router.GET("/dist/main.js", server.ServeFile("dist/main.js"))
-	server.router.GET("/dist/main.css", server.ServeFile("dist/main.css"))
-	server.router.GET("/dist/view.js", server.ServeFile("dist/view.js"))
 	server.router.POST("/php/index.php", server.ServeFunction)
 	server.router.GET("/php/index.php", server.ServeFunction)
 	return
