@@ -43,6 +43,8 @@ var lycheeFuncMap map[string]LycheeFunc = map[string]LycheeFunc{
 	"Session::init":  InitAction,
 	"Session::login": LoginAction,
 	"Albums::get":    GetAlbumsAction,
+	"Album::add":     AddAlbumAction,
+	"Alubm::get":     GetAlbumAction,
 }
 
 func (server *LycheeServer) ServeFile(relativePath string) gin.HandlerFunc {

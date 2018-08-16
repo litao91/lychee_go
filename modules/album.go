@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/litao91/lychee_go/util/helper"
 	"github.com/litao91/lychee_go/util/log"
 )
 
@@ -76,7 +77,7 @@ func GetAlbumsAction(server *LycheeServer, c *gin.Context) {
 
 func GetAlbums(server *LycheeServer, conn *sql.DB) (albums []*Album, err error) {
 	albums = make([]*Album, 0, 10)
-	query := "SELECT id, title, public, sysstamp, password FROM lychee_albums WHERE public = 1 AND visible <> 0 " + server.Settings.SortingAlbums
+	query := "SELECT id, title, public, sysstamp FROM lychee_albums WHERE visible <> 0 " + server.Settings.SortingAlbums
 	log.Debug("Running query: " + query)
 	rows, err := conn.Query(query)
 	if err != nil {
@@ -86,11 +87,44 @@ func GetAlbums(server *LycheeServer, conn *sql.DB) (albums []*Album, err error) 
 	defer rows.Close()
 	for rows.Next() {
 		album := &Album{}
-		err = rows.Scan(&album.Id, &album.Title, &album.Public, &album.sysstamp, &album.Password)
+		err = rows.Scan(&album.Id, &album.Title, &album.Public, &album.sysstamp)
 		if err != nil {
 			return
 		}
 		albums = append(albums, album)
 	}
 	return
+}
+
+func AddAlbumAction(server *LycheeServer, c *gin.Context) {
+	title := c.PostForm("title")
+	log.Info("Creating album with title " + title)
+	if title == "" {
+		c.String(http.StatusBadRequest, "title can't be empty")
+		return
+	}
+	conn, err := server.db.GetConnection()
+	if err != nil {
+		log.Error("%v", err)
+		c.String(http.StatusInternalServerError, "Can't connect to DB")
+		return
+	}
+	defer conn.Close()
+
+	id := helper.GenerateID()
+	sysstamp := time.Now().Unix()
+	public := 0
+	visible := 1
+
+	query := "INSERT INTO lychee_albums (id, title, sysstamp, public, visible) VALUES (?, ?, ?, ?, ?)"
+
+	_, err = conn.Exec(query, id, title, sysstamp, public, visible)
+	if err != nil {
+		c.String(http.StatusBadRequest, "Can't add album with title "+title)
+		return
+	}
+	c.String(200, id)
+}
+
+func GetAlbumAction(server *LycheeServer, c *gin.Context) {
 }
