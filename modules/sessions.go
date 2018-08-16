@@ -11,7 +11,7 @@ func getSettings(server *LycheeServer) (settings *Settings, err error) {
 	settings = &Settings{
 		ThumbQuality:    "90",
 		CheckForUpdates: "1",
-		SortingPhotos:   "ORDER BY id DESC",
+		SortingPhotos:   "id DESC",
 		DropboxKey:      "",
 		Version:         "030100",
 		Imagick:         "1",
