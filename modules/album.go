@@ -2,7 +2,9 @@ package modules
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +17,7 @@ type Album struct {
 	Title        string `json:"title"`
 	Description  string `json:"description"`
 	sysstamp     int64
-	Sysdata      string   `json:"sysdate"`
+	Sysdate      string   `json:"sysdate"`
 	Public       int      `json:"public"`
 	Visible      int      `json:"visible"`
 	Downloadable int      `json:"downloadable"`
@@ -45,7 +47,7 @@ func (a *Album) PrepareData(s *LycheeServer, conn *sql.DB) (err error) {
 		return
 	}
 	t := time.Unix(a.sysstamp, 0)
-	a.Sysdata = t.Format("Jan 2006")
+	a.Sysdate = t.Format("Jan 2006")
 	return
 }
 
@@ -53,13 +55,13 @@ func GetAlbumsAction(server *LycheeServer, c *gin.Context) {
 	conn, err := server.db.GetConnection()
 	if err != nil {
 		log.Error("%v", err)
-		c.String(http.StatusBadRequest, "Get albums error")
+		c.JSON(http.StatusBadRequest, "Get albums error")
 	}
 	defer conn.Close()
 	albums, err := GetAlbums(server, conn)
 	if err != nil {
 		log.Error("%v", err)
-		c.String(http.StatusBadRequest, "Get albums error")
+		c.JSON(http.StatusBadRequest, "Get albums error")
 	}
 	for _, a := range albums {
 		a.PrepareData(server, conn)
@@ -96,6 +98,13 @@ func GetAlbums(server *LycheeServer, conn *sql.DB) (albums []*Album, err error) 
 	return
 }
 
+func GetAlbum(albumID int, conn *sql.DB) (album *Album, err error) {
+	album = &Album{}
+	query := "SELECT id, title, public, sysstamp FROM lychee_albums WHERE id = ? "
+	err = conn.QueryRow(query, albumID).Scan(&album.Id, &album.Title, &album.Public, &album.sysstamp)
+	return
+}
+
 func AddAlbumAction(server *LycheeServer, c *gin.Context) {
 	title := c.PostForm("title")
 	log.Info("Creating album with title " + title)
@@ -127,4 +136,44 @@ func AddAlbumAction(server *LycheeServer, c *gin.Context) {
 }
 
 func GetAlbumAction(server *LycheeServer, c *gin.Context) {
+	albumID, err := strconv.Atoi(c.PostForm("albumID"))
+	if err != nil {
+		log.Error("%v", err)
+		c.String(http.StatusBadRequest, "Invalid album id")
+		return
+	}
+	log.Debug("Get Album detail of ID %d", albumID)
+
+	conn, err := server.db.GetConnection()
+	if err != nil {
+		log.Error("%v", err)
+		c.String(http.StatusInternalServerError, "Can't connect to DB")
+		return
+	}
+	defer conn.Close()
+	album, err := GetAlbum(albumID, conn)
+	if err != nil {
+		log.Error("%v", err)
+		c.String(http.StatusBadRequest, fmt.Sprintf("%v", err))
+		return
+	}
+	album.PrepareData(server, conn)
+	photos, err := LoadPhotosOfAlbum(albumID, conn)
+	if err != nil {
+		log.Error("%v", err)
+		c.String(http.StatusInternalServerError, fmt.Sprintf("%v", err))
+		return
+	}
+	c.JSON(200, gin.H{
+		"id":           album.Id,
+		"title":        album.Title,
+		"public":       album.Public,
+		"description":  album.Description,
+		"visible":      album.Visible,
+		"downloadable": album.Downloadable,
+		"sysdate":      album.Sysdate,
+		"password":     album.Password,
+		"thumbs":       album.ThumbUrls,
+		"content":      photos,
+	})
 }

@@ -44,7 +44,8 @@ var lycheeFuncMap map[string]LycheeFunc = map[string]LycheeFunc{
 	"Session::login": LoginAction,
 	"Albums::get":    GetAlbumsAction,
 	"Album::add":     AddAlbumAction,
-	"Alubm::get":     GetAlbumAction,
+	"Album::get":     GetAlbumAction,
+	"Photo::add":     UploadAction,
 }
 
 func (server *LycheeServer) ServeFile(relativePath string) gin.HandlerFunc {
@@ -86,7 +87,7 @@ func (server *LycheeServer) InitSessions() (err error) {
 func (server *LycheeServer) Init() (err error) {
 	server.db.InitDb()
 	server.InitSessions()
-	server.router.Use(static.Serve("/upload", static.LocalFile(server.dataPath, false)))
+	server.router.Use(static.Serve("/data", static.LocalFile(server.dataPath, false)))
 	server.router.Use(static.Serve("/dist", static.LocalFile(path.Join(server.basePath, "dist"), false)))
 	server.router.Use(static.Serve("/src", static.LocalFile(path.Join(server.basePath, "src"), false)))
 
