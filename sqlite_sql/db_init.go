@@ -3,7 +3,7 @@ package sqlite_sql
 import (
 	"database/sql"
 
-	"github.com/fatedier/frp/utils/log"
+	"github.com/litao91/lychee_go/util/log"
 	_ "github.com/mattn/go-sqlite3"
 )
 
