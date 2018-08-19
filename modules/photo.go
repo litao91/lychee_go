@@ -241,6 +241,10 @@ func (photo *Photo) GenPhotoExif() (err error) {
 	defer f.Close()
 
 	x, err := exif.Decode(f)
+	if err != nil {
+		log.Error("%v", err)
+		return nil
+	}
 
 	model, _ := x.Get(exif.Model)
 	photo.Model, _ = model.StringVal()
@@ -272,12 +276,14 @@ func (photo *Photo) CopyToUpload() (err error) {
 		log.Error("%v", err)
 		return
 	}
+	defer from.Close()
 	to, err := os.Create(photo.uploadPath)
 	if err != nil {
 		log.Error("%v", err)
 		return
 	}
-	_, err = io.Copy(from, to)
+	defer to.Close()
+	_, err = io.Copy(to, from)
 	return
 }
 

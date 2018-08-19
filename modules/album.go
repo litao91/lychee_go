@@ -167,7 +167,7 @@ func GetAlbumAction(server *LycheeServer, c *gin.Context) {
 	var photoMap map[int64]map[string]interface{} = make(map[int64]map[string]interface{})
 	for i, p := range photos {
 		next := photos[(i+1)%len(photos)].ID
-		prev := photos[(i-1)%len(photos)].ID
+		prev := photos[((i-1)+len(photos))%len(photos)].ID
 		m := map[string]interface{}{
 			"id":            p.ID,
 			"title":         p.Title,
