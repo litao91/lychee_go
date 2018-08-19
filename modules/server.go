@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	"github.com/litao91/lychee_go/util/helper"
 	"github.com/litao91/lychee_go/util/log"
 )
 
@@ -35,6 +37,12 @@ type LycheeServer struct {
 	router   *gin.Engine
 	db       *LycheeDb
 	Settings *Settings
+
+	uploadsDir  string
+	mediumDir   string
+	thumbsDir   string
+	tmpDir      string
+	staticPaths []string
 }
 
 type LycheeFunc func(*LycheeServer, *gin.Context)
@@ -46,6 +54,7 @@ var lycheeFuncMap map[string]LycheeFunc = map[string]LycheeFunc{
 	"Album::add":     AddAlbumAction,
 	"Album::get":     GetAlbumAction,
 	"Photo::add":     UploadAction,
+	"Photo::get":     GetPhotoAction,
 }
 
 func (server *LycheeServer) ServeFile(relativePath string) gin.HandlerFunc {
@@ -77,24 +86,47 @@ func (server *LycheeServer) ServeFunction(c *gin.Context) {
 	f(server, c)
 }
 
-func (server *LycheeServer) InitSessions() (err error) {
+func (server *LycheeServer) initSessions() (err error) {
 	// init session
 	store := cookie.NewStore([]byte("lychee"))
 	server.router.Use(sessions.Sessions("lychee", store))
 	return nil
 }
 
-func (server *LycheeServer) Init() (err error) {
-	server.db.InitDb()
-	server.InitSessions()
-	server.router.Use(static.Serve("/data", static.LocalFile(server.dataPath, false)))
+func (server *LycheeServer) initStaticDirectories() {
 	server.router.Use(static.Serve("/dist", static.LocalFile(path.Join(server.basePath, "dist"), false)))
 	server.router.Use(static.Serve("/src", static.LocalFile(path.Join(server.basePath, "src"), false)))
+	for _, i := range server.staticPaths {
+		s := strings.Split(i, "/")
+		p := "/" + s[len(s)-1]
+		log.Debug("Serving " + p)
+		server.router.Use(static.Serve(p, static.LocalFile(i, false)))
+	}
+}
+
+func (server *LycheeServer) prepareDataDirs() {
+	server.uploadsDir = path.Join(server.dataPath, "uploads")
+	server.thumbsDir = path.Join(server.dataPath, "thumbs")
+	server.mediumDir = path.Join(server.dataPath, "medium")
+	helper.CreateDirIfNotExists(server.uploadsDir)
+	helper.CreateDirIfNotExists(server.thumbsDir)
+	helper.CreateDirIfNotExists(server.mediumDir)
+	server.tmpDir = path.Join(server.dataPath, "tmp")
+	helper.CreateDirIfNotExists(server.tmpDir)
+	server.staticPaths = []string{server.uploadsDir, server.thumbsDir, server.mediumDir, "Pictures"}
+	return
+}
+
+func (server *LycheeServer) Init() (err error) {
+	server.db.InitDb()
+	server.initSessions()
 
 	// serve the index file for root
 	server.router.GET("/", server.ServeFile("index.html"))
 	server.router.POST("/php/index.php", server.ServeFunction)
 	server.router.GET("/php/index.php", server.ServeFunction)
+	server.prepareDataDirs()
+	server.initStaticDirectories()
 	return
 }
 

@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `lychee_photos` (
   `thumbUrl` char(37) NOT NULL,
   `album` bigint(20) NOT NULL,
   `checksum` char(40) DEFAULT NULL,
-  `medium` tinyint(1) NOT NULL DEFAULT '0',
+  `medium` varchar(100) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`)
 );
 

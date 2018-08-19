@@ -104,12 +104,15 @@ func copyFileContents(src, dst string) (err error) {
 	return
 }
 
-func main() {
-	fmt.Printf("Copying %s to %s\n", os.Args[1], os.Args[2])
-	err := CopyFile(os.Args[1], os.Args[2])
-	if err != nil {
-		fmt.Printf("CopyFile failed %q\n", err)
-	} else {
-		fmt.Printf("CopyFile succeeded\n")
+func CreateDirIfNotExists(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		os.Mkdir(dir, 0755)
 	}
+}
+
+func DoesFileExists(f string) bool {
+	if _, err := os.Stat(f); os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
