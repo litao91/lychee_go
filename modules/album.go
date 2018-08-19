@@ -164,6 +164,26 @@ func GetAlbumAction(server *LycheeServer, c *gin.Context) {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("%v", err))
 		return
 	}
+	var photoMap map[int64]map[string]interface{} = make(map[int64]map[string]interface{})
+	for i, p := range photos {
+		next := photos[(i+1)%len(photos)].ID
+		prev := photos[((i-1)+len(photos))%len(photos)].ID
+		m := map[string]interface{}{
+			"id":            p.ID,
+			"title":         p.Title,
+			"tags":          p.Tags,
+			"public":        p.Public,
+			"star":          p.Star,
+			"album":         strconv.Itoa(p.Album),
+			"thumbUrl":      p.ThumbUrl,
+			"url":           p.Url,
+			"cameraDate":    p.Takestamp,
+			"sysdate":       album.Sysdate,
+			"previousPhoto": strconv.FormatInt(prev, 10),
+			"nextPhoto":     strconv.FormatInt(next, 10),
+		}
+		photoMap[p.ID] = m
+	}
 	c.JSON(200, gin.H{
 		"id":           album.Id,
 		"title":        album.Title,
@@ -174,6 +194,6 @@ func GetAlbumAction(server *LycheeServer, c *gin.Context) {
 		"sysdate":      album.Sysdate,
 		"password":     album.Password,
 		"thumbs":       album.ThumbUrls,
-		"content":      photos,
+		"content":      photoMap,
 	})
 }
