@@ -51,6 +51,26 @@ func (a *Album) PrepareData(s *LycheeServer, conn *sql.DB) (err error) {
 	return
 }
 
+func GetSmartAlbums(s *LycheeServer, conn *sql.DB) (r map[string]map[string][]string, err error) {
+	r = make(map[string]map[string][]string)
+	// unsorted
+	unsorted := make(map[string][]string)
+	unsorted := make([]string, 0, 0)
+	rows, err := conn.Query("SELECT thumbUrl FROM lychee_photos WHERE album = 0 " + s.Settings.SortingPhotos)
+	if err != nil {
+		log.Error("%v", err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var thumbUrl string
+		rows.Scan(&thumbUrl)
+		unsorted = append(unsorted, thumbUrl)
+	}
+	r["unsorted"] = unsorted
+	return
+}
+
 func GetAlbumsAction(server *LycheeServer, c *gin.Context) {
 	conn, err := server.db.GetConnection()
 	if err != nil {
