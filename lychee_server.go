@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -12,9 +11,6 @@ import (
 func main() {
 	wd, err := filepath.Abs(filepath.Dir(os.Args[1]))
 	log.Info("Working directory: %s", wd)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-	}
 	if err != nil {
 		log.Error("%v", err)
 	}

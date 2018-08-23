@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -55,6 +56,11 @@ var lycheeFuncMap map[string]LycheeFunc = map[string]LycheeFunc{
 	"Album::get":     GetAlbumAction,
 	"Photo::add":     UploadAction,
 	"Photo::get":     GetPhotoAction,
+}
+
+func (server *LycheeServer) GetDBConnection() (db *sql.DB, err error) {
+	db, err = server.db.GetConnection()
+	return
 }
 
 func (server *LycheeServer) ServeFile(relativePath string) gin.HandlerFunc {
