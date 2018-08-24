@@ -228,7 +228,13 @@ func genPhotoMap(photos []*Photo) map[int64]map[string]interface{} {
 		}
 		if p.Takestamp != "" {
 			m["cameraDate"] = "1"
-			m["sysdate"] = p.Takestamp
+			ts, e := strconv.ParseInt(p.Takestamp, 10, 64)
+			if e != nil {
+				m["sysdate"] = p.Takestamp
+			} else {
+				t := time.Unix(ts, 0)
+				m["sysdate"] = t.Format("Jan 2006")
+			}
 		} else {
 			m["cameraDate"] = "0"
 			t := time.Unix(p.ID, 0)

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
@@ -46,6 +47,7 @@ type Photo struct {
 	Shutter     string `json:"shutter"`
 	Focal       string `json:"focal"`
 	Takestamp   string `json:"takestamp"`
+	Takedate    string `json:"takedate"`
 	Star        string `json:"star"`
 	ThumbUrl    string `json:"thumbUrl"`
 	Album       int    `json:"album"`
@@ -171,6 +173,13 @@ func GetPhotoAction(server *LycheeServer, c *gin.Context) {
 		log.Error("%v", err)
 		c.JSON(http.StatusInternalServerError, fmt.Sprintf("%v", err))
 		return
+	}
+	ts, e := strconv.ParseInt(r.Takestamp, 10, 64)
+	if e == nil {
+		t := time.Unix(ts, 0)
+		r.Takedate = t.Format(time.RFC3339)
+	} else {
+		r.Takedate = r.Takestamp
 	}
 
 	c.JSON(200, r)
