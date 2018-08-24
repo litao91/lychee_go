@@ -48,6 +48,7 @@ type LycheeServer struct {
 
 type LycheeFunc func(*LycheeServer, *gin.Context)
 type ActionFunc func(*sql.DB, string) (interface{}, error)
+type ActionFuncTwoArg func(*sql.DB, string, string) (interface{}, error)
 
 func ActionToLycheeFunc(action ActionFunc, arg string) LycheeFunc {
 	return func(server *LycheeServer, c *gin.Context) {
@@ -66,16 +67,39 @@ func ActionToLycheeFunc(action ActionFunc, arg string) LycheeFunc {
 	}
 }
 
+func ActionToLycheeFuncTwoArg(action ActionFuncTwoArg, arg1 string, arg2 string) LycheeFunc {
+	return func(server *LycheeServer, c *gin.Context) {
+		conn, err := server.GetDBConnection()
+		if err != nil {
+			log.Error("%v", err)
+			c.JSON(500, fmt.Sprintf("%v", err))
+		}
+		defer conn.Close()
+		r, err := action(conn, c.PostForm(arg1), c.PostForm(arg2))
+		if err != nil {
+			log.Error("%v", err)
+			c.JSON(500, fmt.Sprintf("%v", err))
+		}
+		c.JSON(200, r)
+	}
+}
+
 var lycheeFuncMap map[string]LycheeFunc = map[string]LycheeFunc{
-	"Session::init":   InitAction,
-	"Session::login":  LoginAction,
-	"Albums::get":     GetAlbumsAction,
-	"Album::add":      AddAlbumAction,
-	"Album::get":      GetAlbumAction,
-	"Photo::add":      UploadAction,
-	"Photo::get":      GetPhotoAction,
-	"Photo::setAlbum": SetPhotoAlbumAction,
-	"Photo::setStar":  ActionToLycheeFunc(SetStar, "photoIDs"),
+	"Session::init":         InitAction,
+	"Session::login":        LoginAction,
+	"Albums::get":           GetAlbumsAction,
+	"Album::add":            AddAlbumAction,
+	"Album::get":            GetAlbumAction,
+	"Album::setTitle":       ActionToLycheeFuncTwoArg(SetAlbumTitle, "albumIDs", "title"),
+	"Album::setDescription": ActionToLycheeFuncTwoArg(SetAlbumDescription, "albumIDs", "description"),
+	"Album::delete":         ActionToLycheeFunc(DeleteAlbum, "albumIDs"),
+	"Photo::add":            UploadAction,
+	"Photo::get":            GetPhotoAction,
+	"Photo::setAlbum":       SetPhotoAlbumAction,
+	"Photo::setStar":        ActionToLycheeFunc(SetStar, "photoIDs"),
+	"Photo::setTitle":       ActionToLycheeFuncTwoArg(SetPhotoTitle, "photoIDs", "title"),
+	"Photo::setDescription": ActionToLycheeFuncTwoArg(SetPhotoDescription, "photoID", "description"),
+	"Photo::setTags":        ActionToLycheeFuncTwoArg(SetPhotoTags, "photoIDs", "tags"),
 }
 
 func (server *LycheeServer) GetDBConnection() (db *sql.DB, err error) {
@@ -138,7 +162,7 @@ func (server *LycheeServer) prepareDataDirs() {
 	helper.CreateDirIfNotExists(server.mediumDir)
 	server.tmpDir = path.Join(server.dataPath, "tmp")
 	helper.CreateDirIfNotExists(server.tmpDir)
-	server.staticPaths = []string{server.uploadsDir, server.thumbsDir, server.mediumDir, "Pictures", "pictures"}
+	server.staticPaths = []string{server.uploadsDir, server.thumbsDir, server.mediumDir, path.Join(server.dataPath, "Pictures"), path.Join(server.dataPath, "pictures")}
 	return
 }
 

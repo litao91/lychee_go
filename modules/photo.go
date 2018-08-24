@@ -103,10 +103,9 @@ func NewPhoto(server *LycheeServer, imgPath string, filename string, idStr strin
 
 	photo.thumbPath = path.Join(server.thumbsDir, checksum+".jpg")
 	photo.thumb2xPath = path.Join(server.thumbsDir, checksum+"@2x.jpg")
+	photo.uploadPath = path.Join(server.uploadsDir, photo.idStr+"_"+filename)
 
 	photo.mediumPath = path.Join(server.mediumDir, checksum+".jpg")
-
-	photo.uploadPath = path.Join(server.uploadsDir, photo.idStr+"_"+filename)
 
 	return
 }
@@ -237,6 +236,31 @@ func SetStar(db *sql.DB, photoIDs string) (interface{}, error) {
 	return true, nil
 }
 
+func SetPhotoTitle(db *sql.DB, photoIDs string, title string) (interface{}, error) {
+	_, err := db.Exec(fmt.Sprintf("UPDATE lychee_photos SET title = ? WHERE id in (%s)", photoIDs), title)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func SetPhotoDescription(db *sql.DB, photoIDs string, description string) (interface{}, error) {
+	log.Debug("Set description of %s to %s", photoIDs, description)
+	_, err := db.Exec(fmt.Sprintf("UPDATE lychee_photos SET description = ? WHERE id in (%s)", photoIDs), description)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func SetPhotoTags(db *sql.DB, photoIDs string, tags string) (interface{}, error) {
+	_, err := db.Exec(fmt.Sprintf("UPDATE lychee_photos SET tags = ? WHERE id in (%s)", photoIDs), tags)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func UploadAction(server *LycheeServer, c *gin.Context) {
 	albumId, err := strconv.Atoi(c.PostForm("albumID"))
 	log.Debug("Uploading image to album: %d", albumId)
@@ -299,32 +323,60 @@ func (photo *Photo) GenPhotoExif() (err error) {
 	}
 	defer f.Close()
 
-	x, err := exif.Decode(f)
-	if err != nil {
-		log.Error("%v", err)
+	x, e := exif.Decode(f)
+	if e != nil {
+		log.Error("%v", e)
 		return nil
 	}
 
-	model, _ := x.Get(exif.Model)
+	model, err := x.Get(exif.Model)
+	if err != nil {
+		log.Error("Model: %v", err)
+	}
 	photo.Model, _ = model.StringVal()
 
-	iso, _ := x.Get(exif.ISOSpeedRatings)
-	photo.Iso, _ = iso.StringVal()
+	iso, e := x.Get(exif.ISOSpeedRatings)
+	if e != nil {
+		log.Error("ISO: %v", e)
+	}
 
-	aperture, _ := x.Get(exif.ApertureValue)
-	photo.Aperture, _ = aperture.StringVal()
+	photo.Iso = iso.String()
+	log.Debug("ISO: " + photo.Iso)
 
-	make, _ := x.Get(exif.Make)
-	photo.Make, _ = make.StringVal()
+	aperture, e := x.Get(exif.ApertureValue)
+	if e != nil {
+		log.Error("%v", e)
+	}
+	photo.Aperture = aperture.String()
+	log.Info("Aperture " + photo.Aperture)
 
-	shutter, _ := x.Get(exif.ShutterSpeedValue)
-	photo.Shutter, _ = shutter.StringVal()
+	make, e := x.Get(exif.Make)
+	if e != nil {
+		log.Error("%v", e)
+	}
+	photo.Make = make.String()
+	log.Info("Make " + photo.Make)
 
-	focal, _ := x.Get(exif.FocalLength)
-	photo.Focal, _ = focal.StringVal()
+	shutter, e := x.Get(exif.ShutterSpeedValue)
+	if e != nil {
+		log.Error("%v", e)
+	}
+	photo.Shutter = shutter.String()
+	log.Info("Shutter " + photo.Shutter)
 
-	takestamp, _ := x.Get(exif.DateTimeOriginal)
-	photo.Takestamp, _ = takestamp.StringVal()
+	focal, e := x.Get(exif.FocalLength)
+	if e != nil {
+		log.Error("%v", e)
+	}
+	photo.Focal = focal.String()
+	log.Info("Focal " + photo.Focal)
+
+	takestamp, e := x.Get(exif.DateTimeOriginal)
+	if e != nil {
+		log.Error("%v", e)
+	}
+	photo.Takestamp = takestamp.String()
+	log.Info("Takestamp " + photo.Takestamp)
 
 	return nil
 }

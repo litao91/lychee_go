@@ -340,3 +340,49 @@ func GetAlbumAction(server *LycheeServer, c *gin.Context) {
 		GetSmartAlbum(albumID, conn, server, c)
 	}
 }
+
+func SetAlbumTitle(conn *sql.DB, albumIDs string, title string) (interface{}, error) {
+	if title == "" {
+		title = "Untitled"
+	}
+	_, err := conn.Exec(fmt.Sprintf("UPDATE lychee_album SET title = ? WHERE id IN (%s)", albumIDs), title)
+	if err != nil {
+		log.Error("%v", err)
+		return false, err
+	}
+	return true, nil
+}
+
+func SetAlbumDescription(conn *sql.DB, albumIDs string, description string) (interface{}, error) {
+	_, err := conn.Exec(fmt.Sprintf("UPDATE lychee_album SET description = ? WHERE id IN (%s)", albumIDs), description)
+	if err != nil {
+		log.Error("%v", err)
+		return false, err
+	}
+	return true, nil
+}
+
+func DeleteAlbum(conn *sql.DB, albumIDs string) (interface{}, error) {
+	tx, err := conn.Begin()
+	if err != nil {
+		log.Error("%v")
+		return false, err
+	}
+
+	_, err = tx.Exec(fmt.Sprintf("UPDATE lychee_photos SET album = 0 WHERE album in (%s)", albumIDs))
+	if err != nil {
+		tx.Rollback()
+		log.Error("%v", err)
+		return false, err
+	}
+
+	_, err = tx.Exec(fmt.Sprintf("DELETE FROM lychee_albums WHERE id in (%s)", albumIDs))
+	if err != nil {
+		tx.Rollback()
+		log.Error("%v", err)
+		return false, err
+	}
+
+	tx.Commit()
+	return true, nil
+}
