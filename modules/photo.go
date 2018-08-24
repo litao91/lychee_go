@@ -380,11 +380,8 @@ func (photo *Photo) GenPhotoExif() (err error) {
 	photo.Focal = fmt.Sprintf("%v mm", numer/denom)
 	log.Info("Focal " + photo.Focal)
 
-	takestamp, e := x.Get(exif.DateTimeOriginal)
-	if e != nil {
-		log.Error("%v", e)
-	}
-	photo.Takestamp, e = takestamp.StringVal()
+	ts, e := x.DateTime()
+	photo.Takestamp = fmt.Sprintf("%v", ts.Unix())
 	if e != nil {
 		log.Error("%v", e)
 	}
