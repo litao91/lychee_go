@@ -279,7 +279,7 @@ func GetSmartAlbum(albumID string, conn *sql.DB, server *LycheeServer, c *gin.Co
 	switch id := albumID; id {
 	case "f":
 		r["public"] = "0"
-		query = PhotoSelectStmt + " WHERE start = 1"
+		query = PhotoSelectStmt + " WHERE star = 1"
 	case "s":
 		r["public"] = "0"
 		query = PhotoSelectStmt + " WHERE public = 1"

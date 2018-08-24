@@ -34,7 +34,7 @@ type Photo struct {
 	Description string `json:"description"`
 	Url         string `json:"url"`
 	Tags        string `json:"tags"`
-	Public      int    `json:"public"`
+	Public      string `json:"public"`
 	Type        string `json:"type"`
 	Width       int    `json:"width"`
 	Height      int    `json:"height"`
@@ -46,7 +46,7 @@ type Photo struct {
 	Shutter     string `json:"shutter"`
 	Focal       string `json:"focal"`
 	Takestamp   string `json:"takestamp"`
-	Star        int    `json:"star"`
+	Star        string `json:"star"`
 	ThumbUrl    string `json:"thumbUrl"`
 	Album       int    `json:"album"`
 	Checksum    string `json:"checksum"`
@@ -70,7 +70,7 @@ func NewPhoto(server *LycheeServer, imgPath string, filename string, idStr strin
 		dataPath:  server.dataPath,
 		imagePath: imgPath,
 		filename:  filename,
-		Public:    0,
+		Public:    "0",
 	}
 
 	photo.ID, err = strconv.ParseInt(photo.idStr, 10, 64)
@@ -146,7 +146,7 @@ func (photo *Photo) Exists(db *sql.DB) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return count > 10, nil
+	return count > 0, nil
 }
 
 func validateExtension(filename string) (string, bool) {
@@ -176,6 +176,65 @@ func GetPhotoAction(server *LycheeServer, c *gin.Context) {
 
 	c.JSON(200, r)
 
+}
+
+func SetPhotoAlbumAction(server *LycheeServer, c *gin.Context) {
+	conn, err := server.GetDBConnection()
+	if err != nil {
+		c.JSON(500, fmt.Sprintf("%v", err))
+		return
+	}
+	defer conn.Close()
+	photoIds := c.PostForm("photoIDs")
+	albumId := c.PostForm("albumID")
+	if err != nil {
+		log.Error("%v", err)
+		c.JSON(500, fmt.Sprintf("%v", err))
+		return
+	}
+	_, err = conn.Exec(fmt.Sprintf("Update lychee_photos SET album = ? WHERE ID IN (%s)", photoIds), albumId)
+	if err != nil {
+		log.Error("%v", err)
+		c.JSON(200, false)
+		return
+	}
+	c.JSON(200, true)
+	return
+}
+
+func SetStar(db *sql.DB, photoIDs string) (interface{}, error) {
+	log.Debug("Star for %s", photoIDs)
+	query := fmt.Sprintf("SELECT id, star FROM lychee_photos WHERE id in (%s)", photoIDs)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Error("%v", err)
+		return false, err
+	}
+	defer rows.Close()
+
+	idStar := [][]int{}
+	for rows.Next() {
+		var id, star int
+		rows.Scan(&id, &star)
+		log.Debug("%d - %d", id, star)
+		idStar = append(idStar, []int{id, star})
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		log.Error("%v", err)
+		return false, err
+	}
+	for _, i := range idStar {
+		_, err := tx.Exec("UPDATE lychee_photos SET star = ? WHERE id = ?", 1-i[1], i[0])
+		if err != nil {
+			log.Error("%v", err)
+			tx.Rollback()
+			return false, err
+		}
+	}
+
+	tx.Commit()
+	return true, nil
 }
 
 func UploadAction(server *LycheeServer, c *gin.Context) {
@@ -381,6 +440,10 @@ func (photo *Photo) createThumb() error {
 }
 
 func (photo *Photo) createMedium() {
+	if helper.DoesFileExists(photo.mediumPath) {
+		log.Info("Medium file %s exists, continue", photo.mediumPath)
+		return
+	}
 	height := photo.img.Bounds().Size().Y
 	width := photo.img.Bounds().Size().X
 	if height <= 1920 && width <= 1920 {
