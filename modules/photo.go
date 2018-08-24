@@ -343,39 +343,51 @@ func (photo *Photo) GenPhotoExif() (err error) {
 	photo.Iso = iso.String()
 	log.Debug("ISO: " + photo.Iso)
 
-	aperture, e := x.Get(exif.ApertureValue)
+	aperture, e := x.Get(exif.FNumber)
 	if e != nil {
 		log.Error("%v", e)
 	}
-	photo.Aperture = aperture.String()
+	numer, denom, e := aperture.Rat2(0)
+	photo.Aperture = fmt.Sprintf("%.1f", float64(numer)/float64(denom))
 	log.Info("Aperture " + photo.Aperture)
 
 	make, e := x.Get(exif.Make)
 	if e != nil {
 		log.Error("%v", e)
 	}
-	photo.Make = make.String()
-	log.Info("Make " + photo.Make)
-
-	shutter, e := x.Get(exif.ShutterSpeedValue)
+	photo.Make, e = make.StringVal()
 	if e != nil {
 		log.Error("%v", e)
 	}
-	photo.Shutter = shutter.String()
+	log.Info("Make " + photo.Make)
+
+	shutter, e := x.Get(exif.ExposureTime)
+	if e != nil {
+		log.Error("%v", e)
+	}
+	photo.Shutter = fmt.Sprintf("%s s", strings.Trim(shutter.String(), "\""))
 	log.Info("Shutter " + photo.Shutter)
 
 	focal, e := x.Get(exif.FocalLength)
 	if e != nil {
 		log.Error("%v", e)
 	}
-	photo.Focal = focal.String()
+
+	numer, denom, e = focal.Rat2(0)
+	if e != nil {
+		log.Error("%v", e)
+	}
+	photo.Focal = fmt.Sprintf("%v mm", numer/denom)
 	log.Info("Focal " + photo.Focal)
 
 	takestamp, e := x.Get(exif.DateTimeOriginal)
 	if e != nil {
 		log.Error("%v", e)
 	}
-	photo.Takestamp = takestamp.String()
+	photo.Takestamp, e = takestamp.StringVal()
+	if e != nil {
+		log.Error("%v", e)
+	}
 	log.Info("Takestamp " + photo.Takestamp)
 
 	return nil
