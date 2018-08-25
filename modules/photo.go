@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/disintegration/imaging"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/gin-gonic/gin"
 	"github.com/litao91/lychee_go/util/helper"
 	"github.com/litao91/lychee_go/util/log"
@@ -323,8 +324,13 @@ func UploadAction(server *LycheeServer, c *gin.Context) {
 func (photo *Photo) GenPhotoExif() (err error) {
 	photo.Height = photo.img.Bounds().Size().Y
 	photo.Width = photo.img.Bounds().Size().X
-	photo.Size = photo.img.Bounds().Size().String()
-
+	fi, e := os.Stat(photo.imagePath)
+	if e != nil {
+		log.Error("%v", e)
+		return e
+	}
+	// get the size
+	photo.Size = humanize.Bytes(uint64(fi.Size()))
 	f, err := os.Open(photo.imagePath)
 	if err != nil {
 		log.Error("%v", err)
@@ -341,60 +347,69 @@ func (photo *Photo) GenPhotoExif() (err error) {
 	model, err := x.Get(exif.Model)
 	if err != nil {
 		log.Error("Model: %v", err)
+	} else {
+		photo.Model, _ = model.StringVal()
 	}
-	photo.Model, _ = model.StringVal()
 
 	iso, e := x.Get(exif.ISOSpeedRatings)
 	if e != nil {
 		log.Error("ISO: %v", e)
+	} else {
+		photo.Iso = iso.String()
+		log.Debug("ISO: " + photo.Iso)
 	}
-
-	photo.Iso = iso.String()
-	log.Debug("ISO: " + photo.Iso)
 
 	aperture, e := x.Get(exif.FNumber)
 	if e != nil {
 		log.Error("%v", e)
+	} else {
+		numer, denom, e := aperture.Rat2(0)
+		if e != nil {
+			log.Error("%v", e)
+		} else {
+			photo.Aperture = fmt.Sprintf("%.1f", float64(numer)/float64(denom))
+			log.Info("Aperture " + photo.Aperture)
+		}
 	}
-	numer, denom, e := aperture.Rat2(0)
-	photo.Aperture = fmt.Sprintf("%.1f", float64(numer)/float64(denom))
-	log.Info("Aperture " + photo.Aperture)
 
 	make, e := x.Get(exif.Make)
 	if e != nil {
 		log.Error("%v", e)
+	} else {
+		photo.Make, e = make.StringVal()
+		if e != nil {
+			log.Error("%v", e)
+		}
+		log.Info("Make " + photo.Make)
 	}
-	photo.Make, e = make.StringVal()
-	if e != nil {
-		log.Error("%v", e)
-	}
-	log.Info("Make " + photo.Make)
 
 	shutter, e := x.Get(exif.ExposureTime)
 	if e != nil {
 		log.Error("%v", e)
+	} else {
+		photo.Shutter = fmt.Sprintf("%s s", strings.Trim(shutter.String(), "\""))
+		log.Info("Shutter " + photo.Shutter)
 	}
-	photo.Shutter = fmt.Sprintf("%s s", strings.Trim(shutter.String(), "\""))
-	log.Info("Shutter " + photo.Shutter)
 
 	focal, e := x.Get(exif.FocalLength)
 	if e != nil {
 		log.Error("%v", e)
+	} else {
+		numer, denom, e := focal.Rat2(0)
+		if e != nil {
+			log.Error("%v", e)
+		}
+		photo.Focal = fmt.Sprintf("%v mm", numer/denom)
+		log.Info("Focal " + photo.Focal)
 	}
-
-	numer, denom, e = focal.Rat2(0)
-	if e != nil {
-		log.Error("%v", e)
-	}
-	photo.Focal = fmt.Sprintf("%v mm", numer/denom)
-	log.Info("Focal " + photo.Focal)
 
 	ts, e := x.DateTime()
-	photo.Takestamp = fmt.Sprintf("%v", ts.Unix())
 	if e != nil {
 		log.Error("%v", e)
+	} else {
+		photo.Takestamp = fmt.Sprintf("%v", ts.Unix())
+		log.Info("Takestamp " + photo.Takestamp)
 	}
-	log.Info("Takestamp " + photo.Takestamp)
 
 	return nil
 }

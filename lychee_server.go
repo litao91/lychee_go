@@ -9,12 +9,12 @@ import (
 )
 
 func main() {
-	wd, err := filepath.Abs(filepath.Dir(os.Args[1]))
+	wd, err := filepath.Abs(os.Args[1])
 	log.Info("Working directory: %s", wd)
 	if err != nil {
 		log.Error("%v", err)
 	}
-	dd, err := filepath.Abs(filepath.Dir(os.Args[2]))
+	dd, err := filepath.Abs(os.Args[2])
 	if err != nil {
 		log.Error("%v", err)
 		return
