@@ -271,6 +271,50 @@ func SetPhotoTags(db *sql.DB, photoIDs string, tags string) (interface{}, error)
 	return true, nil
 }
 
+func DeletePhotoAction(server *LycheeServer, c *gin.Context) {
+	photoIDs := c.PostForm("photoIDs")
+	db, err := server.GetDBConnection()
+	if err != nil {
+		log.Error("%v", err)
+		c.JSON(http.StatusInternalServerError, fmt.Sprintf("%v", err))
+		return
+	}
+	query := fmt.Sprintf("SELECT url, thumbUrl, medium FROM lychee_photos WHERE id in (%s)", photoIDs)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Error("%v", err)
+		c.JSON(http.StatusInternalServerError, fmt.Sprintf("%v", err))
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var url, thumbUrl, medium string
+		err := rows.Scan(&url, &thumbUrl, &medium)
+		if err != nil {
+			log.Error("%v", err)
+			c.JSON(http.StatusInternalServerError, fmt.Sprintf("%v", err))
+			return
+		}
+		img := path.Join(server.dataPath, url)
+		thumb := path.Join(server.dataPath, thumbUrl)
+		splitted := strings.Split(thumb, ".")
+		thumb2x := splitted[0] + "@2x" + splitted[1]
+		m := path.Join(server.dataPath, medium)
+		log.Debug("Deleting %s, %s, %s, %s", img, thumb, thumb2x, m)
+		log.Debug("DOn't do real deletion for now")
+	}
+
+	query = fmt.Sprintf("DELETE from lychee_photos WHERE id in (%s)", photoIDs)
+	_, err = db.Exec(query)
+	if err != nil {
+		log.Error("%v", err)
+		c.JSON(500, false)
+		return
+	}
+
+	c.JSON(200, true)
+}
+
 func UploadAction(server *LycheeServer, c *gin.Context) {
 	albumId, err := strconv.Atoi(c.PostForm("albumID"))
 	log.Debug("Uploading image to album: %d", albumId)

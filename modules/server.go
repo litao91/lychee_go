@@ -100,6 +100,7 @@ var lycheeFuncMap map[string]LycheeFunc = map[string]LycheeFunc{
 	"Photo::setTitle":       ActionToLycheeFuncTwoArg(SetPhotoTitle, "photoIDs", "title"),
 	"Photo::setDescription": ActionToLycheeFuncTwoArg(SetPhotoDescription, "photoID", "description"),
 	"Photo::setTags":        ActionToLycheeFuncTwoArg(SetPhotoTags, "photoIDs", "tags"),
+	"Photo::delete":         DeletePhotoAction,
 }
 
 func (server *LycheeServer) GetDBConnection() (db *sql.DB, err error) {
